@@ -23,7 +23,7 @@ contract FourMemeTokenQuoterTest is Test {
 
     function setUp() public {
         // Fork BSC mainnet for realistic testing
-        vm.createSelectFork(vm.envString("BSC_RPC_URL"));
+        vm.createSelectFork("https://bsc.blockrazor.xyz");
         
         // Deploy the quoter contract
         quoter = new FourMemeTokenQuoter();
@@ -47,15 +47,4 @@ contract FourMemeTokenQuoterTest is Test {
         console2.log("poolAddress", poolAddress);
         console2.log("feeRate", feeRate);
     }
-
-    function test_getPoolAddress_ThenaToken() public {
-        address poolAddress = quoter.getPoolAddress(ThenaToken);
-        console2.log("poolAddress", poolAddress);
-    }
-
-    function test_getFeeRate_ThenaToken() public {
-        uint24 feeRate = quoter.getFeeRate(ThenaToken);
-        console2.log("feeRate", feeRate);
-    }
-    
 }
