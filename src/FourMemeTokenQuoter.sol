@@ -30,6 +30,7 @@ interface IFactory {
     function poolByPair(address, address) external view returns (address);
 }
 
+
 contract FourMemeTokenQuoter {
     address public constant TOKEN_MANAGER = 0x5c952063c7fc8610FFDB798152D69F0B9550762b;
     address public constant TOKEN_SWAP = 0x350A94c918f7A0C8d108ba90f1b242B0143572B9;
@@ -54,10 +55,10 @@ contract FourMemeTokenQuoter {
         require(quoteToken != WETH, "Quote token cannot be BNB");
         
         uint24 fee = uint24(ITokenSwap(TOKEN_SWAP)._fees(quoteToken));
-        require(fee > 0, "Invalid fee rate");
+        // require(fee > 0, "Invalid fee rate");
         
         if (quoteToken == THENA) {
-            pool = IFactory(THENA_FACTORY).poolByPair(quoteToken, token);
+            pool = IFactory(THENA_FACTORY).poolByPair(quoteToken, WETH);
         } else {
             pool = IFactory(PANCAKE_FACTORY).getPool(quoteToken, WETH, fee);
         }
@@ -82,7 +83,7 @@ contract FourMemeTokenQuoter {
         
         if (version == 2 && quoteToken != WETH) {
             feeRate = getFeeRate(quoteToken);
-            if (feeRate > 0) {
+            if (feeRate > 0 || quoteToken == THENA) {
                 poolAddress = getPoolAddress(token);
             }
         }
