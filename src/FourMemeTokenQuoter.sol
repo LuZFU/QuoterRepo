@@ -55,11 +55,11 @@ contract FourMemeTokenQuoter {
         require(quoteToken != WETH, "Quote token cannot be BNB");
         
         uint24 fee = uint24(ITokenSwap(TOKEN_SWAP)._fees(quoteToken));
-        // require(fee > 0, "Invalid fee rate");
         
         if (quoteToken == THENA) {
             pool = IFactory(THENA_FACTORY).poolByPair(quoteToken, WETH);
         } else {
+            require(fee > 0, "Invalid fee rate");
             pool = IFactory(PANCAKE_FACTORY).getPool(quoteToken, WETH, fee);
         }
         
