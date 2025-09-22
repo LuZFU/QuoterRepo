@@ -399,6 +399,32 @@ interface IPoolManager {
     function extsload(bytes32 startSlot, uint256 nSlots) external view returns (bytes32[] memory);
 }
 
+interface IBinPoolManager {
+    type PoolId is bytes32;
+
+    /// @notice Get the current value in slot0 of the given pool
+    function getSlot0(PoolId id) external view returns (uint24 activeId, uint24 protocolFee, uint24 lpFee);
+
+    /// @notice Returns the reserves of a bin
+    /// @param id The id of the bin
+    /// @return binReserveX The reserve of token X in the bin
+    /// @return binReserveY The reserve of token Y in the bin
+    /// @return binLiquidity The total liquidity in the bin
+    /// @return totalShares The total shares minted in the bin
+    function getBin(PoolId id, uint24 binId)
+        external
+        view
+        returns (uint128 binReserveX, uint128 binReserveY, uint256 binLiquidity, uint256 totalShares);
+
+    /// @notice Returns the next non-empty bin
+    /// @dev The next non-empty bin is the bin with a higher (if swapForY is true) or lower (if swapForY is false)
+    ///     id that has a non-zero reserve of token X or Y.
+    /// @param swapForY Whether the swap is for token Y (true) or token X (false)
+    /// @param id The id of the bin
+    /// @return nextId The id of the next non-empty bin
+    function getNextNonEmptyBin(PoolId id, bool swapForY, uint24 binId) external view returns (uint24 nextId);
+}
+
 /// @title DexNativeRouter
 /// @notice Entrance of trading native token in web3-dex
 contract QueryData {
@@ -409,6 +435,7 @@ contract QueryData {
     address public immutable STATE_VIEW;
     address public immutable POSITION_MANAGER;
     address public constant PANCAKE_INFINITY_CLPOOLMANAGER = 0xa0FfB9c1CE1Fe56963B0321B32E7A0302114058b;
+    address public constant PANCAKE_INFINITY_LBPOOLMANAGER = 0xC697d2898e0D09264376196696c51D7aBbbAA4a9;
     address public constant PANCAKE_INFINITY_POSITION_MANAGER = 0x55f4c8abA71A1e923edC303eb4fEfF14608cC226;
 
     constructor (
@@ -1273,6 +1300,30 @@ contract QueryData {
             tmp.left--;
         }
         return tickInfo;
+    }
+
+    function queryPancakeInfinityLBReserve(bytes32 poolId)
+        public
+        view
+        returns (uint256 totalReserveX, uint256 totalReserveY)
+    {
+        IBinPoolManager.PoolId lbPoolId = IBinPoolManager.PoolId.wrap(poolId);
+        uint24 minBinId = IBinPoolManager(PANCAKE_INFINITY_LBPOOLMANAGER).getNextNonEmptyBin(lbPoolId, false, 1);
+        uint24 maxBinId = IBinPoolManager(PANCAKE_INFINITY_LBPOOLMANAGER).getNextNonEmptyBin(lbPoolId, true, type(uint24).max);
+        (uint24 activeId, , ) = IBinPoolManager(PANCAKE_INFINITY_LBPOOLMANAGER).getSlot0(lbPoolId);
+
+        for (uint24 i = minBinId; i <= maxBinId; i++) {
+            (uint128 reserveX, uint128 reserveY,,) = IBinPoolManager(PANCAKE_INFINITY_LBPOOLMANAGER).getBin(lbPoolId, i);
+            if (i < activeId) {
+                totalReserveY += reserveY;
+            } else if (i > activeId) {
+                totalReserveX += reserveX;
+            } else {
+                // i == activeId
+                totalReserveX += reserveX;
+                totalReserveY += reserveY;
+            }
+        }
     }
 
     function queryZoraTicksSuperCompact(address coin, uint256 len) public view returns (bytes memory) {
